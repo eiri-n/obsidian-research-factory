@@ -7,3 +7,4 @@ styles.css
 test_vault/
 repro_*.js
 repro_*.mjs
+data.json
