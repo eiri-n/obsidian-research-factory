@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-research-factory",
+	"name": "Obsidian Research Factory",
+	"version": "0.1.0",
+	"minAppVersion": "0.15.0",
+	"description": "Automated research workflow plugin for Obsidian.",
+	"author": "Obsidian Research Factory Team",
+	"authorUrl": "",
+	"isDesktopOnly": true
+}

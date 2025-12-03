@@ -1,0 +1,9 @@
+node_modules
+.DS_Store
+.idea
+.vscode
+main.js
+styles.css
+test_vault/
+repro_*.js
+repro_*.mjs
