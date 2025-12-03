@@ -102,5 +102,9 @@ export default class ObsidianResearchFactoryPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
+        // Propagate settings updates to services
+        if (this.noteGenerator) {
+            this.noteGenerator.updateSettings(this.settings);
+        }
     }
 }

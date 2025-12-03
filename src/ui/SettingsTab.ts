@@ -84,6 +84,76 @@ export class ObsidianResearchFactorySettingTab extends PluginSettingTab {
                     new Notice('Template reset to default.');
                 }));
 
+        containerEl.createEl('h3', { text: 'AI Settings (Gemini)' });
+
+        new Setting(containerEl)
+            .setName('Enable AI Analysis')
+            .setDesc('Enable automatic extraction of Tasks, Methods, and Targets from abstracts using Google Gemini.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableAI)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableAI = value;
+                    await this.plugin.saveSettings();
+                    this.display(); // Refresh to show/hide other AI settings
+                }));
+
+        if (this.plugin.settings.enableAI) {
+            new Setting(containerEl)
+                .setName('Gemini API Key')
+                .setDesc('Your Google Gemini API Key.')
+                .addText(text => text
+                    .setPlaceholder('AIzaSy...')
+                    .setValue(this.plugin.settings.geminiApiKey)
+                    .onChange(async (value) => {
+                        this.plugin.settings.geminiApiKey = value;
+                        await this.plugin.saveSettings();
+                    }));
+
+            new Setting(containerEl)
+                .setName('Model Name')
+                .setDesc('Gemini model to use (e.g., gemini-1.5-flash, gemini-1.5-pro).')
+                .addText(text => text
+                    .setPlaceholder('gemini-1.5-flash')
+                    .setValue(this.plugin.settings.aiModelName)
+                    .onChange(async (value) => {
+                        this.plugin.settings.aiModelName = value;
+                        await this.plugin.saveSettings();
+                    }));
+
+            new Setting(containerEl)
+                .setName('Candidate Tasks')
+                .setDesc('Comma-separated list of candidate tasks for the AI to consider.')
+                .addTextArea(text => text
+                    .setPlaceholder('classification, regression, clustering')
+                    .setValue(this.plugin.settings.candidateTasks.join(', '))
+                    .onChange(async (value) => {
+                        this.plugin.settings.candidateTasks = value.split(',').map(s => s.trim()).filter(Boolean);
+                        await this.plugin.saveSettings();
+                    }));
+
+            new Setting(containerEl)
+                .setName('Candidate Methods')
+                .setDesc('Comma-separated list of candidate methods.')
+                .addTextArea(text => text
+                    .setPlaceholder('transformer, cnn, lstm')
+                    .setValue(this.plugin.settings.candidateMethods.join(', '))
+                    .onChange(async (value) => {
+                        this.plugin.settings.candidateMethods = value.split(',').map(s => s.trim()).filter(Boolean);
+                        await this.plugin.saveSettings();
+                    }));
+
+            new Setting(containerEl)
+                .setName('Candidate Targets')
+                .setDesc('Comma-separated list of candidate targets.')
+                .addTextArea(text => text
+                    .setPlaceholder('image, text, audio')
+                    .setValue(this.plugin.settings.candidateTargets.join(', '))
+                    .onChange(async (value) => {
+                        this.plugin.settings.candidateTargets = value.split(',').map(s => s.trim()).filter(Boolean);
+                        await this.plugin.saveSettings();
+                    }));
+        }
+
         containerEl.createEl('h3', { text: 'Auto-Tagging Rules' });
 
         const rulesContainer = containerEl.createDiv();

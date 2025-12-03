@@ -13,6 +13,13 @@ export interface ObsidianResearchFactorySettings {
     pdfRootPath: string;
     updatePolicy: UpdatePolicy;
     noteOutputFolder: string;
+    // AI Settings
+    enableAI: boolean;
+    geminiApiKey: string;
+    aiModelName: string;
+    candidateTasks: string[];
+    candidateMethods: string[];
+    candidateTargets: string[];
 }
 
 export const DEFAULT_SETTINGS: ObsidianResearchFactorySettings = {
@@ -21,5 +28,11 @@ export const DEFAULT_SETTINGS: ObsidianResearchFactorySettings = {
     taggingRules: [],
     pdfRootPath: '',
     updatePolicy: 'preserve',
-    noteOutputFolder: '' // Empty means root
+    noteOutputFolder: '', // Empty means root
+    enableAI: false,
+    geminiApiKey: '',
+    aiModelName: 'gemini-1.5-flash',
+    candidateTasks: [],
+    candidateMethods: [],
+    candidateTargets: []
 }

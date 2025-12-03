@@ -2,12 +2,14 @@ import { App, Notice, TFile } from 'obsidian';
 import { Entry } from '@retorquere/bibtex-parser';
 import { TemplateService } from './TemplateService';
 import { PDFService } from './PDFService';
+import { GeminiService } from './GeminiService';
 import { ObsidianResearchFactorySettings } from '../types/plugin';
 
 export class NoteGenerator {
     private app: App;
     private templateService: TemplateService;
     private pdfService: PDFService;
+    private geminiService: GeminiService;
     private settings: ObsidianResearchFactorySettings;
 
     constructor(app: App, settings: ObsidianResearchFactorySettings) {
@@ -15,6 +17,12 @@ export class NoteGenerator {
         this.settings = settings;
         this.templateService = new TemplateService();
         this.pdfService = new PDFService();
+        this.geminiService = new GeminiService(settings.geminiApiKey, settings.aiModelName);
+    }
+
+    public updateSettings(settings: ObsidianResearchFactorySettings) {
+        this.settings = settings;
+        this.geminiService.updateSettings(settings.geminiApiKey, settings.aiModelName);
     }
 
     /**
@@ -55,9 +63,92 @@ export class NoteGenerator {
         }
 
         const filename = folderPath ? `${folderPath}/${title}.md` : `${title}.md`;
-        const newContent = this.buildNoteContent(entry);
+
+        // Prepare data for AI
+        const abstract = this.getFieldValue(entry.fields.abstract);
+
+        // Initialize with default empty values so they appear in Frontmatter
+        let aiData: any = {
+            ai_problem: '',
+            ai_method: '',
+            ai_result: '',
+            ai_future_work: '',
+            ai_model: '',
+            ai_abstract_hash: ''
+        };
+        let aiHash = '';
+
+        if (this.settings.enableAI && abstract) {
+            aiHash = this.cyrb53(abstract).toString();
+        } else {
+            if (!this.settings.enableAI) console.log('AI is disabled in settings.');
+            if (!abstract) console.log(`No abstract found for ${entry.key}.`);
+        }
 
         const file = this.app.vault.getAbstractFileByPath(filename);
+        let existingFrontmatter: any = {};
+
+        if (file instanceof TFile) {
+            // Read existing frontmatter to check for cache
+            const cache = this.app.metadataCache.getFileCache(file);
+            existingFrontmatter = cache?.frontmatter || {};
+
+            // Check if we need to run AI
+            if (this.settings.enableAI && abstract) {
+                if (existingFrontmatter.ai_abstract_hash === aiHash) {
+                    // Skip AI, use existing data if available
+                    console.log(`Skipping AI for ${entry.key} (Hash match)`);
+                    aiData = {
+                        ai_problem: existingFrontmatter.ai_problem,
+                        ai_method: existingFrontmatter.ai_method,
+                        ai_result: existingFrontmatter.ai_result,
+                        ai_future_work: existingFrontmatter.ai_future_work,
+                        ai_model: existingFrontmatter.ai_model,
+                        ai_abstract_hash: existingFrontmatter.ai_abstract_hash
+                    };
+                } else {
+                    // Run AI
+                    console.log(`Running AI for ${entry.key}`);
+                    const result = await this.geminiService.analyzeAbstract(abstract, {
+                        tasks: this.settings.candidateTasks,
+                        methods: this.settings.candidateMethods,
+                        targets: this.settings.candidateTargets
+                    });
+
+                    if (result) {
+                        aiData = {
+                            ai_problem: result.problem,
+                            ai_method: result.method,
+                            ai_result: result.result,
+                            ai_future_work: result.future_work,
+                            ai_model: this.settings.aiModelName,
+                            ai_abstract_hash: aiHash
+                        };
+                    }
+                }
+            }
+        } else if (this.settings.enableAI && abstract) {
+            // New file, run AI
+            console.log(`Running AI for new note ${entry.key}`);
+            const result = await this.geminiService.analyzeAbstract(abstract, {
+                tasks: this.settings.candidateTasks,
+                methods: this.settings.candidateMethods,
+                targets: this.settings.candidateTargets
+            });
+
+            if (result) {
+                aiData = {
+                    ai_problem: result.problem,
+                    ai_method: result.method,
+                    ai_result: result.result,
+                    ai_future_work: result.future_work,
+                    ai_model: this.settings.aiModelName,
+                    ai_abstract_hash: aiHash
+                };
+            }
+        }
+
+        const newContent = this.buildNoteContent(entry, aiData);
 
         if (file instanceof TFile) {
             // Handle existing file based on policy
@@ -121,7 +212,7 @@ export class NoteGenerator {
         return newFrontmatter + oldBody;
     }
 
-    private buildNoteContent(entry: Entry): string {
+    private buildNoteContent(entry: Entry, aiData: any = {}): string {
         const data = {
             citekey: entry.key,
             title: this.getFieldValue(entry.fields.title),
@@ -132,7 +223,8 @@ export class NoteGenerator {
             abstract: this.getFieldValue(entry.fields.abstract) || 'No abstract available.',
             tags: this.generateTags(entry),
             pdf_path: this.getPDFPath(entry),
-            pdf_link: this.getPDFLink(entry)
+            pdf_link: this.getPDFLink(entry),
+            ...aiData
         };
 
         return this.templateService.render(data, this.settings.template);
@@ -209,5 +301,17 @@ export class NoteGenerator {
 
     private sanitizeFileName(name: string): string {
         return name.replace(/[\\/:*?"<>|]/g, '').substring(0, 255);
+    }
+
+    private cyrb53(str: string, seed = 0): number {
+        let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+        for (let i = 0, ch; i < str.length; i++) {
+            ch = str.charCodeAt(i);
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        return 4294967296 * (2097151 & h2) + (h1 >>> 0);
     }
 }

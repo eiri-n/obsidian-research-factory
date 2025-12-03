@@ -11,25 +11,26 @@ year: {{year}}
 journal: "{{journal}}"
 type: {{type}}
 tags: {{{tags}}}
+ai_model: "{{ai_model}}"
+ai_abstract_hash: "{{ai_abstract_hash}}"
 ---
 
 # {{title}}
 
 {{{pdf_link}}}
 
-## 1. どんな研究？（3行要約）
-- {{abstract}}
+## 1. どんな研究？（AI要約）
+**解きたい問題**: {{ai_problem}}
+**手法**: {{ai_method}}
+**結果**: {{ai_result}}
 
-## 2. 手法（Methodology）の肝は？
-- 
+## 2. Abstract
+{{abstract}}
 
-## 3. 結果のハイライト
-- 
+## 3. 今後の課題（AI抽出）
+- {{ai_future_work}}
 
-## 4. 残された課題・批判（Research Gap）
-- 
-
-## 5. 自分の研究への応用アイデア
+## 4. 自分の研究への応用アイデア
 - 
 `;
 
